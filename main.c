@@ -1,11 +1,9 @@
 #define _GNU_SOURCE
 
 #include "buffer.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-
 #include <sys/wait.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -47,14 +45,6 @@ struct Message
 
 #define MESSAGE_MAX_SIZE (sizeof(struct Message) + 255)
 
-// int dataSize(uint8_t messageSize) { return (messageSize + 3) / 4 * 4; }
-
-// int messageSizeForSize(uint8_t size) { return sizeof(struct Message); }
-
-// int sendMessage(struct Buffer *buffer, struct Message *message) { return sendBytes(buffer, messageSizeForSize(message->size), message); }
-
-// int readMessage(struct Buffer *buffer, struct Message *message) { return readBytes(buffer, messageSizeForSize(message->size), message); }q
-
 int MessageSize(struct Message *message) { return sizeof(*message) + message->size; }
 
 struct Message *readMessage(struct Buffer *buffer)
@@ -65,6 +55,13 @@ struct Message *readMessage(struct Buffer *buffer)
     buffer->extracted++;
     printf("Extracted : %d\n", (buffer->extracted));
     return memcpy(malloc(MessageSize(head)), head, MessageSize(head));
+}
+
+void sendMessage(struct Buffer *buffer, struct Message *message)
+{
+    sendBytes(buffer, MessageSize(message), (char *)message);
+    buffer->added++;
+    printf("Added : %d\n", buffer->added);
 }
 
 uint16_t xor (int length, char bytes[]) {
@@ -99,15 +96,12 @@ void produceProc(struct Buffer *buffer)
     {
         sem_wait(freeSpace);
         struct Message *message = randomMessage();
-        sendBytes(buffer, MessageSize(message), (char *)message);
-        buffer->added++;
-        printf("Added : %d\n", buffer->added);
+        sendMessage(buffer, message);
         printf(
-            "Producer %5d Sent message with type %02hX and hash %04hX Buffer length %d\n",
+            "Producer %5d Sent message with type %02hX and hash %04hX\n",
             getpid(),
             message->type,
-            message->hash,
-            length(buffer));
+            message->hash);
         free(message);
         sem_post(items);
         sleep(3);
@@ -121,11 +115,10 @@ void consumeProc(struct Buffer *buffer)
         sem_wait(items);
         struct Message *message = readMessage(buffer);
         printf(
-            "Consumer %5d Got  message with type %02hX and hash %04hX Buffer length %d\n",
+            "Consumer %5d Got  message with type %02hX and hash %04hX\n",
             getpid(),
             message->type,
-            message->hash,
-            length(buffer));
+            message->hash);
         free(message);
 
         sem_post(freeSpace);
@@ -210,7 +203,7 @@ int main()
     int capacity = 1024;
     struct Buffer *buffer = createBuffer(smalloc(sizeof(struct Buffer) + capacity), capacity);
     char opt[256];
-    printf("Statr program\n");
+    printf("Start program\n");
     while (scanf("%s", opt))
     {
         if (!strcmp(opt, "p"))

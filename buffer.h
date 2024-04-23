@@ -43,22 +43,6 @@ void sfree(void *shared)
 static struct Buffer *createBuffer(struct Buffer *buffer, int size)
 {
 
-    // if ((shm = shm_open("mem", (O_RDWR | O_CREAT | O_TRUNC), (S_IRUSR | S_IWUSR))) == -1)
-    // {
-    //     perror("shm_open");
-    //     return 1;
-    // }
-    // if (ftruncate(shm, sizeof(struct Buffer)) == -1)
-    // {
-    //     perror("ftruncate");
-    //     return 1;
-    // }
-
-    // if (close(shm))
-    // {
-    //     perror("close");
-    //     exit(EXIT_FAILURE);
-    // }
     sem_unlink("/mutex");
     sem_unlink("/mutexL");
     *buffer = (struct Buffer){
@@ -80,7 +64,7 @@ static inline void freeDesctruct(struct Buffer *buffer)
     sem_unlink("/mutexL");
 }
 
-static inline int length(struct Buffer *buffer)
+int length(struct Buffer *buffer)
 {
     sem_wait(buffer->mutexL);
     int length = buffer->begin <= buffer->end
@@ -89,24 +73,6 @@ static inline int length(struct Buffer *buffer)
     sem_post(buffer->mutexL);
     return length;
 }
-
-// static inline int capacity(struct Buffer *buffer) { return buffer->end - buffer->begin; }
-
-// static inline void moveHead(struct Buffer *buffer)
-// {
-//     buffer->head++;
-//     if (buffer->head >= buffer->end)
-//         buffer->head = buffer->begin;
-// }
-
-// static inline void moveTail(struct Buffer *buffer)
-// {
-//     buffer->tail++;
-//     if (buffer->tail >= buffer->end)
-//         buffer->tail = buffer->begin;
-// }
-
-// int bytesSize(uint8_t messageSize) { return (messageSize + 3) / 4 * 4; }
 
 int availableBuffer(struct Buffer *buffer)
 {
@@ -157,8 +123,8 @@ static inline int sendBytes(struct Buffer *buffer, int count, char bytes[])
 static inline int readBytes(struct Buffer *buffer, int count, uint8_t bytes[])
 {
     sem_wait(buffer->mutex);
-    int base = buffer->end;
-    while (availableBuffer(buffer) < count)
+    int base = buffer->begin;
+    while (length(buffer) < count)
         ;
     for (int i = 0; i < count; i++)
     {
