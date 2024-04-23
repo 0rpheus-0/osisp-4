@@ -7,8 +7,6 @@
 #include <fcntl.h>
 #include <semaphore.h>
 
-int shm;
-
 struct Buffer
 {
     int added;
