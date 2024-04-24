@@ -12,7 +12,6 @@ struct Buffer
     int added;
     int extracted;
     sem_t *mutex;
-    sem_t *mutexL;
     int capacity;
     int begin;
     int end;
@@ -42,15 +41,13 @@ static struct Buffer *createBuffer(struct Buffer *buffer, int size)
 {
 
     sem_unlink("/mutex");
-    sem_unlink("/mutexL");
     *buffer = (struct Buffer){
         .added = 0,
         .extracted = 0,
         .capacity = size,
         .begin = 0,
         .end = 0,
-        .mutex = sem_open("/mutex", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR, 1),
-        .mutexL = sem_open("/mutexL", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR, 1)};
+        .mutex = sem_open("/mutex", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR, 1)};
 
     return buffer;
 }
@@ -59,17 +56,13 @@ static inline void freeDesctruct(struct Buffer *buffer)
 {
     sfree(buffer);
     sem_unlink("/mutex");
-    sem_unlink("/mutexL");
 }
 
 int length(struct Buffer *buffer)
 {
-    sem_wait(buffer->mutexL);
-    int length = buffer->begin <= buffer->end
-                     ? buffer->end - buffer->begin
-                     : ((buffer->end - 0) + (buffer->capacity - buffer->begin));
-    sem_post(buffer->mutexL);
-    return length;
+    return buffer->begin <= buffer->end
+               ? buffer->end - buffer->begin
+               : ((buffer->end - 0) + (buffer->capacity - buffer->begin));
 }
 
 int availableBuffer(struct Buffer *buffer)
